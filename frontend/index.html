@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Co-Inventor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Persistent header -->
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="wordmark">
+        <div class="wordmark-icon">
+          <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 1L7.5 4.5H11L8 7L9 11L6 8.5L3 11L4 7L1 4.5H4.5L6 1Z" fill="white"/>
+          </svg>
+        </div>
+        Co-Inventor
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Screen 1: Input ──────────────────────────────────────────────── -->
+  <div id="screen-input" class="screen active">
+    <div class="page-inner">
+
+      <div class="input-headline">
+        <h1>What technical problem<br>do you want to solve?</h1>
+        <p>Describe the problem and Co-Inventor will generate ranked, novel invention concepts — including ideas triggered by recent advances from adjacent fields.</p>
+      </div>
+
+      <label class="field-label" for="problem-statement">Problem statement</label>
+      <div class="problem-input-wrap">
+        <textarea
+          id="problem-statement"
+          rows="4"
+          placeholder="e.g. Reduce biofouling on ship hulls without using toxic antifouling paints"
+          maxlength="2000"
+        ></textarea>
+      </div>
+      <div class="char-hint"><span id="char-count">0</span> / 2000 characters</div>
+
+      <div class="example-row">
+        <span class="example-label">Try</span>
+        <button class="example-chip" data-problem="Improve adhesion of coatings to polyolefin plastics without surface pre-treatment or primer layers">Coating adhesion on plastics</button>
+        <button class="example-chip" data-problem="Reduce biofouling on ship hulls without using toxic antifouling paints">Ship hull biofouling</button>
+        <button class="example-chip" data-problem="Increase energy density of solid-state lithium batteries while maintaining fast charge capability">Solid-state battery density</button>
+        <button class="example-chip" data-problem="Improve workability of high-strength concrete without increasing water-to-cement ratio">Concrete workability</button>
+      </div>
+
+      <button id="btn-start" class="btn-primary" disabled>
+        Generate inventions
+        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="how-section">
+        <div class="section-eyebrow">How it works</div>
+        <div class="how-grid">
+          <div class="how-cell">
+            <div class="how-num">01</div>
+            <div class="how-title">Trigger discovery</div>
+            <div class="how-desc">Searches for recent advances in adjacent domains that enable new solutions</div>
+          </div>
+          <div class="how-cell">
+            <div class="how-num">02</div>
+            <div class="how-title">Parallel generation</div>
+            <div class="how-desc">Five strategies run simultaneously: direct, analogical, assumption-breaking, search-inspired, trigger-based</div>
+          </div>
+          <div class="how-cell">
+            <div class="how-num">03</div>
+            <div class="how-title">Novelty evaluation</div>
+            <div class="how-desc">Each idea checked for prior art, feasibility, problem fit, and patentability</div>
+          </div>
+          <div class="how-cell">
+            <div class="how-num">04</div>
+            <div class="how-title">Elo ranking</div>
+            <div class="how-desc">Pairwise debates rank inventions more reliably than absolute scoring</div>
+          </div>
+          <div class="how-cell">
+            <div class="how-num">05</div>
+            <div class="how-title">Evolution</div>
+            <div class="how-desc">Top inventions are refined and the best two are combined into a hybrid</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Screen 2: Progress ───────────────────────────────────────────── -->
+  <div id="screen-progress" class="screen">
+    <div class="page-inner">
+
+      <div class="progress-problem-label">Inventing for</div>
+      <div id="progress-problem-text" class="progress-problem-text"></div>
+
+      <div class="stage-breadcrumb" id="stage-breadcrumb">
+        <span class="stage-crumb" data-stage="generating">Generation</span>
+        <span class="stage-sep">›</span>
+        <span class="stage-crumb" data-stage="proximity">Proximity</span>
+        <span class="stage-sep">›</span>
+        <span class="stage-crumb" data-stage="reflecting">Reflection</span>
+        <span class="stage-sep">›</span>
+        <span class="stage-crumb" data-stage="ranking">Ranking</span>
+        <span class="stage-sep">›</span>
+        <span class="stage-crumb" data-stage="evolving">Evolution</span>
+        <span class="stage-sep">›</span>
+        <span class="stage-crumb" data-stage="meta_reviewing">Meta-review</span>
+      </div>
+
+      <div id="progress-status" class="progress-status">
+        <div class="spinner"></div>
+        <span id="progress-status-text">Starting pipeline…</span>
+      </div>
+
+      <div class="progress-cols">
+        <div>
+          <div class="progress-col-head">
+            Inventions
+            <span id="invention-count" class="live-count">0</span>
+          </div>
+          <div id="invention-stream" class="item-stream"></div>
+        </div>
+        <div>
+          <div class="progress-col-head">
+            Searches
+            <span id="search-count" class="live-count">0</span>
+          </div>
+          <div id="search-stream" class="item-stream"></div>
+        </div>
+      </div>
+
+      <div id="activity-log" class="activity-log"></div>
+
+    </div>
+  </div>
+
+  <!-- ── Screen 3: Results ────────────────────────────────────────────── -->
+  <div id="screen-results" class="screen">
+    <div class="page-inner">
+
+      <div class="results-top">
+        <h2>Invention ideas</h2>
+        <div id="results-problem-echo" class="results-problem-echo"></div>
+        <div class="results-meta-row" id="results-meta-row"></div>
+      </div>
+
+      <!-- Meta-review -->
+      <div class="meta-review-block" id="meta-review-block" style="display:none">
+        <div class="meta-review-header">Research Overview</div>
+        <div class="meta-review-body" id="meta-review-body"></div>
+      </div>
+
+      <!-- Invention cards -->
+      <div id="invention-list" class="invention-list"></div>
+
+      <!-- Next round -->
+      <div class="next-round-block" id="next-round-block">
+        <div class="next-round-header">
+          <div class="next-round-title">Run another round</div>
+          <div class="next-round-desc">The next round will be seeded with this round's top inventions and meta-review insights, so the system explores new territory rather than repeating itself.</div>
+        </div>
+        <label class="field-label" for="round-feedback" style="margin-top:14px">
+          Steer the next round <span style="font-weight:400;color:var(--text-3)">(optional)</span>
+        </label>
+        <textarea
+          id="round-feedback"
+          rows="2"
+          placeholder="e.g. Focus more on nanoscale approaches. The simulated debate ideas were too conservative. Ignore chemical surface treatments."
+          style="margin-bottom:12px"
+        ></textarea>
+        <button id="btn-next-round" class="btn-primary">
+          Start Round <span id="next-round-num">2</span>
+          <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="results-footer-row">
+        <button id="btn-new" class="btn-ghost">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M10 6H2M2 6L5 3M2 6L5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          New problem
+        </button>
+        <div class="export-group">
+          <button id="btn-export-md" class="btn-ghost">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v7M6 8L3.5 5.5M6 8l2.5-2.5M1 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Export report
+          </button>
+          <button id="btn-export-json" class="btn-ghost">JSON</button>
+        </div>
+        <div class="results-session-id" id="results-session-id"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

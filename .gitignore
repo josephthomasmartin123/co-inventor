@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — never commit
+.env
+
+# Local database
+*.db
+
+# macOS
+.DS_Store
+
+# Research notes (local only)
+Coinventor notes vault/
+
+# PDF (large binary, tracked separately if needed)
+*.pdf
