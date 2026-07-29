@@ -2,6 +2,6 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "python app/main.py"
+startCommand = "python -m app.main"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3

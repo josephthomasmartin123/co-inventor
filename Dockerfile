@@ -8,4 +8,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 8000
-CMD ["python", "app/main.py"]
+# -m puts /app (cwd) on sys.path so `from app.api import ...` resolves
+CMD ["python", "-m", "app.main"]
