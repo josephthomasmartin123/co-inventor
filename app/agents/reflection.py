@@ -42,6 +42,11 @@ WEIGHTS = {
 
 _INITIAL_SYSTEM = """You are a senior patent examiner doing a rapid first-pass review.
 Score each dimension 1-5 without doing a literature search. Be calibrated: 3 = genuinely average.
+
+If the invention brings together known elements, check that they INTERACT to produce a
+technical effect neither produces alone. Features sitting side by side, each doing its own
+separate job, are an aggregation — score novelty and patentability low and fail the filter.
+
 Output ONLY valid JSON."""
 
 def _initial_prompt(problem: str, inv: Invention) -> str:
@@ -77,6 +82,13 @@ Evaluate thoroughly on five dimensions:
 
 NOVELTY (0.30 weight): Use web_search to check prior art. Search the specific mechanism.
   A high score requires the mechanism to be absent from prior art.
+  AGGREGATION TEST — apply this whenever the invention brings together known elements:
+    absence from prior art is NOT novelty if the pairing is an obvious collocation.
+    Ask whether the elements INTERACT to produce a technical effect that neither
+    produces alone. If each element merely continues doing its own job side by side,
+    that is an aggregation: score 1-2 on novelty even if no single document shows the
+    exact pairing, and say so in the rationale. Reserve 4-5 for combinations where you
+    can name the interaction and the effect that emerges only from it.
 
 SCIENTIFIC PLAUSIBILITY (0.25 weight): Does the underlying science work?
   Are the physical, chemical, or biological principles sound?
@@ -84,6 +96,9 @@ SCIENTIFIC PLAUSIBILITY (0.25 weight): Does the underlying science work?
 
 PATENTABILITY (0.20 weight): Is it a specific, claimable technical solution?
   Not an abstract idea or desired result — a concrete mechanism with identifiable elements.
+  A claim reciting features that do not functionally interact is an aggregation and
+  cannot support an inventive step — score it 1-2 regardless of how specific the
+  individual features are.
 
 FEASIBILITY (0.15 weight): Can it be built with current or near-future (5-year) technology?
 

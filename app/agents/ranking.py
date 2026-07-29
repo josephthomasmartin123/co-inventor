@@ -38,6 +38,10 @@ technical expert. Compare two invention concepts and decide which is more valuab
 Evaluation criteria (in priority order):
 1. NOVELTY — Which has a more non-obvious, surprise-worthy mechanism?
 2. MECHANISM SPECIFICITY — Which is more concretely defined (not vague outcomes)?
+   Penalise aggregation: an invention that lists several features which do not
+   functionally interact is weaker than a single mechanism producing a clear technical
+   effect, even though it sounds richer. More features is not more invention — ask what
+   effect emerges from the parts working together, and prefer the one that has one.
 3. COMMERCIAL POTENTIAL — Which would be harder for competitors to design around?
 4. FEASIBILITY — Which is more achievable with near-term technology?
 5. PROBLEM FIT — Which more directly addresses the core problem?
