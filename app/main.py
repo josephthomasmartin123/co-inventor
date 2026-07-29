@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
         )
 
     provider = "OpenRouter" if settings.use_openrouter else "Anthropic"
-    model = settings.generation_model
+    model = settings.r_generation_model
     logger.info(f"LLM provider: {provider} | Default model: {model}")
 
     search_backends = []

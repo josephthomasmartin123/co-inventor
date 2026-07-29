@@ -127,9 +127,18 @@ ROUND 2 — Critiques (1-2 sentences each):
 ROUND 3 — Refined positions (2 sentences each, addressing the critique received):
   Each expert refines their approach to address the critique.
 
-SYNTHESIS — Generate 2 invention concepts that capture the strongest elements from the
-final refined positions. The inventions should reflect the debate's convergence.
-Do not simply pick one expert's view — synthesise genuinely.
+SYNTHESIS — Generate 2 invention concepts from the final refined positions.
+Do not simply pick one expert's view — but do not merely bundle them either.
+
+Synthesis is only inventive if the experts' mechanisms INTERACT to produce a technical
+effect none of them achieves alone. "Use A's material AND B's process AND C's geometry"
+is an aggregation — each element still does its own separate job, which an examiner reads
+as obvious. Instead, find where one expert's mechanism removes a limitation the others
+identified in their critiques: that dependency is where a real combined effect lives.
+State that effect explicitly in the summary.
+
+If the refined positions genuinely do not interact, do not force a hybrid — take the
+single strongest mechanism and deepen it instead.
 
 {_OUTPUT_SCHEMA}"""
 
