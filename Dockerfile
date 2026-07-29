@@ -7,7 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x start.sh
-
 EXPOSE 8000
-ENTRYPOINT ["./start.sh"]
+CMD ["python", "app/main.py"]
