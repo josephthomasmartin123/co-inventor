@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan: startup + shutdown."""
     # Startup
-    logger.info("Co-Inventor starting up...")
+    logger.info("Joe-Bot starting up...")
 
     # Warn if no LLM key is configured
     if not settings.has_llm_key:
@@ -65,16 +65,16 @@ async def lifespan(app: FastAPI):
     # Per-session SSE event queues
     app.state.event_queues: dict = {}
 
-    logger.info("Co-Inventor ready ✓")
+    logger.info("Joe-Bot ready ✓")
 
     yield
 
     # Shutdown
-    logger.info("Co-Inventor shutting down")
+    logger.info("Joe-Bot shutting down")
 
 
 app = FastAPI(
-    title="Co-Inventor",
+    title="Joe-Bot",
     description="AI-powered invention ideation using multi-agent Co-Scientist architecture",
     version="0.1.0",
     lifespan=lifespan,

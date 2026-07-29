@@ -141,7 +141,7 @@ async def _run_openrouter(
     client = AsyncOpenAI(
         api_key=settings.openrouter_api_key,
         base_url="https://openrouter.ai/api/v1",
-        default_headers={"HTTP-Referer": "https://co-inventor.app", "X-Title": "Co-Inventor"},
+        default_headers={"HTTP-Referer": "https://joe-bot.app", "X-Title": "Joe-Bot"},
     )
 
     active_tools = tools if tools is not None else [WEB_SEARCH_TOOL]
