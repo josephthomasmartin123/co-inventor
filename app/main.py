@@ -113,11 +113,8 @@ app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=True,
-        reload_dirs=["app"],
-    )
+    # Read PORT from environment (Railway sets this automatically)
+    port = int(os.environ.get("PORT", settings.port))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
