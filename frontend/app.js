@@ -96,7 +96,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const problem = document.getElementById('results-problem-echo').textContent;
     if (currentSessionId && problem) startSession(problem, currentSessionId, feedback);
   });
+
+  // A run continues on the server whether or not this page is open, so a refresh
+  // (or a closed tab, or a shared link) should rejoin it rather than lose it.
+  const resumeId = storedSessionId();
+  if (resumeId) resumeSession(resumeId);
 });
+
+// ── Session persistence ───────────────────────────────────────────────────
+// The session id is the only thing needed to get back to a run. Keep it in the
+// URL so the tab is refreshable and the link is shareable, and in localStorage
+// so it survives the URL being cleaned up.
+
+const ACTIVE_SESSION_KEY = 'joebot.activeSession';
+
+function rememberSession(id) {
+  try { localStorage.setItem(ACTIVE_SESSION_KEY, id); } catch {}
+  try { history.replaceState(null, '', `?session=${encodeURIComponent(id)}`); } catch {}
+}
+
+function forgetSession() {
+  try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch {}
+  try { history.replaceState(null, '', location.pathname); } catch {}
+}
+
+function storedSessionId() {
+  const fromUrl = new URLSearchParams(location.search).get('session');
+  if (fromUrl) return fromUrl;
+  try { return localStorage.getItem(ACTIVE_SESSION_KEY); } catch { return null; }
+}
+
+async function resumeSession(sessionId) {
+  let payload;
+  try {
+    const res = await fetch(`/api/sessions/${sessionId}`);
+    if (!res.ok) { forgetSession(); return; }
+    payload = await res.json();
+  } catch {
+    return;   // offline: leave the stored id alone so a later reload can retry
+  }
+
+  const session = payload.session || {};
+  currentSessionId = sessionId;
+
+  if (session.status === 'complete') {
+    await loadAndShowResults(sessionId);
+    return;
+  }
+
+  showScreen('progress');
+  document.getElementById('progress-problem-text').textContent = session.problem_statement || '';
+
+  // Restore what the snapshot can tell us. Search counts are not persisted, so
+  // that tile restarts from zero — say so rather than let it look like a reset.
+  const invs = payload.inventions || [];
+  inventionCount = invs.length;
+  document.getElementById('invention-count').textContent = String(inventionCount);
+  [...invs].reverse().forEach(inv => prependToStream('invention-stream', buildInvItem(inv)));
+  if (session.status) activateStage(session.status);
+
+  if (session.status === 'failed') {
+    setStatus(session.error || 'Pipeline failed', true);
+    return;
+  }
+
+  addLog(
+    `Rejoined a run already in progress — ${inventionCount} invention${inventionCount !== 1 ? 's' : ''} so far. ` +
+    `Earlier activity is not replayed; new events appear below.`,
+    'dim',
+  );
+  setStatus('Rejoined run in progress…');
+  connectSSE(sessionId);
+
+  // Watchdog. On rejoining, the pre-refresh connection may still be attached to the
+  // same queue for up to one keepalive tick, and whichever consumer receives the
+  // terminal event pops the queue — so this page could miss 'done' entirely through
+  // no fault of the stream. Polling stops as soon as the run is seen to finish.
+  startResultPolling(sessionId);
+}
 
 // ── Screens ───────────────────────────────────────────────────────────────
 
@@ -109,6 +186,7 @@ function showScreen(name) {
 function resetToInput() {
   if (eventSource) { eventSource.close(); eventSource = null; }
   stopResultPolling();
+  forgetSession();
   currentSessionId = null;
   inventionCount = 0;
   searchCount = 0;
@@ -155,6 +233,7 @@ async function startSession(problem, parentSessionId = '', userFeedback = '') {
     }
     const { session_id } = await resp.json();
     currentSessionId = session_id;
+    rememberSession(session_id);
     connectSSE(session_id);
   } catch (err) {
     setStatus(`Network error: ${err.message}`, true);
