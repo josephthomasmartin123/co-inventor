@@ -33,7 +33,7 @@ const STRATEGY_INFO = {
   },
   simulated_debate: {
     label: 'Simulated debate',
-    description: 'Ran a structured self-play debate between three expert personas: a materials scientist, a process engineer, and a systems thinker. Each proposed an approach, critiqued the others, and refined their position. The invention synthesises the strongest elements from all three.',
+    description: 'Ran a structured self-play debate between three expert personas: a materials scientist, a process engineer, and a systems thinker. Each proposed an approach, critiqued the others, and refined their position. The invention comes from where their mechanisms genuinely interact — one removing a limitation another identified — rather than from bundling all three together.',
   },
   iterative_assumptions: {
     label: 'Iterative assumptions',
@@ -49,11 +49,11 @@ const STRATEGY_INFO = {
   },
   enhanced: {
     label: 'Enhanced (evolved)',
-    description: 'An AI-refined version of a top-ranked invention from this round. The mechanism was deepened and made more specific, and weaknesses flagged in the evaluation were addressed.',
+    description: 'A refined version of a top-ranked invention from this round. The mechanism was deepened and made more specific, and weaknesses flagged in the evaluation were addressed. It was then reviewed and re-entered the tournament, so it only ranks above its parent by beating it.',
   },
   combined: {
     label: 'Combined (evolved)',
-    description: 'A hybrid of the two highest-ranked inventions. The best mechanisms from each were merged to create a concept that captures the distinct strengths of both.',
+    description: 'A hybrid of two top-ranked inventions drawn from different mechanistic families — combining two variants of one approach yields nothing. It was only produced because the two mechanisms interact to give a technical effect neither parent has alone, and like any other idea it had to win its rank in the tournament.',
   },
 };
 
@@ -411,7 +411,7 @@ function buildInventionCard(inv, review, idx) {
 
   const rankLabel = idx === 0 ? '#1' : idx === 1 ? '#2' : idx === 2 ? '#3' : `#${idx + 1}`;
   const s = inv.strategy || 'direct';
-  const eloScore = Math.round(inv.elo_score || 1000);
+  const eloScore = Math.round(inv.elo_score || 1200);
   const info = STRATEGY_INFO[s] || { label: s, description: '' };
 
   // Trigger block — only for literature_exploration inventions that have a trigger
@@ -644,7 +644,7 @@ function exportMarkdown() {
 
   inventions.forEach((inv, idx) => {
     const review = reviews[inv.id] || null;
-    const elo = Math.round(inv.elo_score || 1000);
+    const elo = Math.round(inv.elo_score || 1200);
     lines.push(`### #${idx + 1} — ${inv.title}`);
     lines.push(`**Strategy:** ${strategyLabel(inv.strategy || 'direct')} · **Elo score:** ${elo}`);
     lines.push('');

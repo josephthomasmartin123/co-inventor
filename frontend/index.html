@@ -59,33 +59,140 @@
 
       <div class="how-section">
         <div class="section-eyebrow">How it works</div>
-        <div class="how-grid">
+
+        <p class="how-lead">
+          Joe-Bot is a six-stage pipeline of specialised agents, modelled on Google's
+          AI Co-Scientist. Ideas are generated in parallel by five different reasoning
+          strategies, de-duplicated, evaluated against real prior art, then ranked
+          against each other in a tournament rather than scored in isolation — because
+          absolute scores drift, but pairwise judgements hold up.
+        </p>
+
+        <!-- Pipeline diagram -->
+        <div class="flow-wrap">
+          <svg class="flow-svg" viewBox="0 0 640 480" role="img"
+               aria-label="Pipeline diagram: a problem statement fans out to five generation strategies, which converge through proximity de-duplication, two-tier reflection, Elo ranking, evolution and meta-review to produce the top five inventions; the result loops back to seed the next round.">
+            <defs>
+              <marker id="flow-arrow" viewBox="0 0 8 8" refX="4" refY="4"
+                      markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M1,1 L7,4 L1,7 z" class="flow-arrowhead"/>
+              </marker>
+            </defs>
+
+            <!-- Problem statement -->
+            <rect class="flow-node-accent" x="210" y="8" width="200" height="28" rx="14"/>
+            <text class="flow-label-on-accent" x="310" y="26" text-anchor="middle">Your problem statement</text>
+            <path class="flow-line" d="M310,36 V52" marker-end="url(#flow-arrow)"/>
+
+            <!-- Fan-out rail -->
+            <path class="flow-line" d="M90.5,52 H526.5"/>
+            <path class="flow-line" d="M90.5,52 V66"/>
+            <path class="flow-line" d="M199.5,52 V66"/>
+            <path class="flow-line" d="M308.5,52 V66"/>
+            <path class="flow-line" d="M417.5,52 V66"/>
+            <path class="flow-line" d="M526.5,52 V66"/>
+
+            <!-- Five generation strategies -->
+            <rect class="flow-chip" x="40"  y="66" width="101" height="30" rx="6"/>
+            <text class="flow-chip-label" x="90.5"  y="85" text-anchor="middle">Literature *</text>
+            <rect class="flow-chip" x="149" y="66" width="101" height="30" rx="6"/>
+            <text class="flow-chip-label" x="199.5" y="85" text-anchor="middle">Debate</text>
+            <rect class="flow-chip" x="258" y="66" width="101" height="30" rx="6"/>
+            <text class="flow-chip-label" x="308.5" y="85" text-anchor="middle">Assumptions</text>
+            <rect class="flow-chip" x="367" y="66" width="101" height="30" rx="6"/>
+            <text class="flow-chip-label" x="417.5" y="85" text-anchor="middle">First principles</text>
+            <rect class="flow-chip" x="476" y="66" width="101" height="30" rx="6"/>
+            <text class="flow-chip-label" x="526.5" y="85" text-anchor="middle">Analogy</text>
+
+            <!-- Converge rail -->
+            <path class="flow-line" d="M90.5,96 V122"/>
+            <path class="flow-line" d="M199.5,96 V122"/>
+            <path class="flow-line" d="M308.5,96 V122"/>
+            <path class="flow-line" d="M417.5,96 V122"/>
+            <path class="flow-line" d="M526.5,96 V122"/>
+            <path class="flow-line" d="M90.5,122 H526.5"/>
+            <path class="flow-line" d="M310,122 V138" marker-end="url(#flow-arrow)"/>
+
+            <!-- Stage 2 -->
+            <rect class="flow-node" x="40" y="138" width="540" height="44" rx="8"/>
+            <text class="flow-stage-num" x="54" y="157">02 · Proximity</text>
+            <text class="flow-stage-desc" x="54" y="172">Drops near-identical mechanisms, groups the rest into mechanistic families</text>
+            <path class="flow-line" d="M310,182 V198" marker-end="url(#flow-arrow)"/>
+
+            <!-- Stage 3 -->
+            <rect class="flow-node" x="40" y="198" width="540" height="44" rx="8"/>
+            <text class="flow-stage-num" x="54" y="217">03 · Reflection</text>
+            <text class="flow-stage-desc" x="54" y="232">Quick first-pass score, then a full prior-art search on five weighted dimensions *</text>
+            <path class="flow-line" d="M310,242 V258" marker-end="url(#flow-arrow)"/>
+
+            <!-- Stage 4 -->
+            <rect class="flow-node" x="40" y="258" width="540" height="44" rx="8"/>
+            <text class="flow-stage-num" x="54" y="277">04 · Ranking</text>
+            <text class="flow-stage-desc" x="54" y="292">Everything enters level at 1200; 12 head-to-head debates decide the order</text>
+            <path class="flow-line" d="M310,302 V318" marker-end="url(#flow-arrow)"/>
+
+            <!-- Stage 5 -->
+            <rect class="flow-node" x="40" y="318" width="540" height="44" rx="8"/>
+            <text class="flow-stage-num" x="54" y="337">05 · Evolution</text>
+            <text class="flow-stage-desc" x="54" y="352">Deepens the top 3; fuses only unlike pairs — then variants must re-compete *</text>
+            <path class="flow-line" d="M310,362 V378" marker-end="url(#flow-arrow)"/>
+
+            <!-- Stage 6 -->
+            <rect class="flow-node" x="40" y="378" width="540" height="44" rx="8"/>
+            <text class="flow-stage-num" x="54" y="397">06 · Meta-review</text>
+            <text class="flow-stage-desc" x="54" y="412">Reads every evaluation and writes the research overview</text>
+            <path class="flow-line" d="M310,422 V438" marker-end="url(#flow-arrow)"/>
+
+            <!-- Result -->
+            <rect class="flow-node-accent" x="210" y="438" width="200" height="30" rx="15"/>
+            <text class="flow-label-on-accent" x="310" y="457" text-anchor="middle">Top 5 ranked inventions</text>
+
+            <!-- Feedback loop into the next round -->
+            <path class="flow-line-dashed" d="M410,453 H602 V81 H581" marker-end="url(#flow-arrow)"/>
+            <text class="flow-loop-label" x="614" y="267" text-anchor="middle"
+                  transform="rotate(-90 614 267)">next round is seeded with these + the overview</text>
+          </svg>
+        </div>
+        <div class="flow-footnote">* the stages that search the live web — evolution because its variants go back through the same review</div>
+
+        <div class="how-grid how-grid-6">
           <div class="how-cell">
             <div class="how-num">01</div>
-            <div class="how-title">Trigger discovery</div>
-            <div class="how-desc">Searches for recent advances in adjacent domains that enable new solutions</div>
+            <div class="how-title">Parallel generation</div>
+            <div class="how-desc">Five strategies run at once: literature exploration, simulated expert debate, assumption inversion, first-principles decomposition, and cross-domain analogy. Each returns two concepts, and every concept must name a mechanism — not an outcome.</div>
           </div>
           <div class="how-cell">
             <div class="how-num">02</div>
-            <div class="how-title">Parallel generation</div>
-            <div class="how-desc">Five strategies run simultaneously: direct, analogical, assumption-breaking, search-inspired, trigger-based</div>
+            <div class="how-title">Proximity</div>
+            <div class="how-desc">Two ideas describing the same physics in different words are near-duplicates; the vaguer one is dropped before the expensive stage. The survivors are clustered into mechanistic families.</div>
           </div>
           <div class="how-cell">
             <div class="how-num">03</div>
-            <div class="how-title">Novelty evaluation</div>
-            <div class="how-desc">Each idea checked for prior art, feasibility, problem fit, and patentability</div>
+            <div class="how-title">Reflection</div>
+            <div class="how-desc">A cheap first pass scores everything unaided; ideas that fail it skip the search and carry low scores forward. The rest get a full prior-art review weighted on novelty (30%), plausibility (25%), patentability (20%), feasibility (15%) and problem fit (10%).</div>
           </div>
           <div class="how-cell">
             <div class="how-num">04</div>
             <div class="how-title">Elo ranking</div>
-            <div class="how-desc">Pairwise debates rank inventions more reliably than absolute scoring</div>
+            <div class="how-desc">Every idea enters level, at 1200 — nothing is seeded from its review score, so the order is earned in 12 pairwise debates rather than decided in advance. A fresh judge deciding "which of these two is better" is more reliable than any absolute score. Matches favour lookalike ideas and newcomers, since those are the comparisons that actually separate a field.</div>
           </div>
           <div class="how-cell">
             <div class="how-num">05</div>
             <div class="how-title">Evolution</div>
-            <div class="how-desc">Top inventions are refined and the best two are combined into a hybrid</div>
+            <div class="how-desc">The top 3 are deepened with specifics that answer their own review. Combination is only attempted across unlike approaches, never between two variants of one idea, and only where the mechanisms interact to produce an effect neither parent has alone — pairs that would merely sit side by side are discarded rather than forced. Nothing is promoted for being new: a variant is reviewed like any other idea and has to beat the invention it came from to outrank it.</div>
+          </div>
+          <div class="how-cell">
+            <div class="how-num">06</div>
+            <div class="how-title">Meta-review</div>
+            <div class="how-desc">A final agent reads every evaluation — not just the winners — and writes up what held across the run: recurring obstacles, directions left unexplored, and the one route most worth pursuing.</div>
           </div>
         </div>
+
+        <p class="how-lead how-lead-tail">
+          You can then run another round. It inherits this round's top inventions and
+          overview, so the system pushes into new territory instead of re-deriving what
+          it already found — and you can steer it in plain language before it starts.
+        </p>
       </div>
 
     </div>
