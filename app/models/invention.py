@@ -33,7 +33,11 @@ class Invention(BaseModel):
     mechanism: str                      # How it works technically
     strategy: str                       # See STRATEGY_DESCRIPTIONS in frontend for full list
     search_evidence: list[str] = []     # URLs found during generation search
-    elo_score: float = 1000.0
+    # Paper: "We set the initial Elo rating of 1200 for the newly added hypothesis."
+    # Every invention enters the tournament here, whenever it is created — an evolved
+    # variant gets no head start over the concept it came from. Only match outcomes
+    # move a rating.
+    elo_score: float = 1200.0
     elo_wins: int = 0
     elo_losses: int = 0
 

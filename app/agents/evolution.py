@@ -1,16 +1,23 @@
 """
 Evolution Agent
 
-Takes the top-ranked inventions and produces improved variants:
+Takes the top-ranked inventions and produces candidate variants:
 
 1. ENHANCE — Deepen the mechanism: add specificity, address reflection weaknesses,
-   strengthen the non-obviousness argument. Produces one enhanced variant per top-K invention.
+   strengthen the non-obviousness argument. One enhanced variant per top-K invention.
 
-2. COMBINE — Merge the top-2 inventions into a hybrid that captures the best of both.
-   Often produces the strongest final candidate.
+2. COMBINE — Attempted only between DIFFERENT mechanistic families, and only where the
+   two mechanisms interact to produce a technical effect neither parent achieves alone.
+   Combining two variants of one approach yields an aggregation, which is worthless as a
+   patent claim however impressive it reads. Each attempt may decline, and zero
+   combinations is a valid outcome — see docs/ADAPTATION.md §1.4 and §1.5.
 
-Evolved inventions seed their Elo at parent score + 50 (optimistic prior).
-They are merged with the original ranked list and sorted to produce final top-5.
+This agent PROPOSES; it does not promote. Variants carry no Elo advantage: they enter the
+tournament at the same rating as everything else and must win to outrank their parents. The
+caller is responsible for reviewing them and re-running the tournament, which is what the
+paper requires — "each new hypothesis must also compete in the tournament" (§2.2).
+Consequently `EvolutionResult.final_ranked` is the merged field in its PRE-tournament
+order; it is not the final ranking despite the name.
 """
 from __future__ import annotations
 
@@ -25,6 +32,10 @@ from app.models.invention import Invention, Review
 from app.models.pipeline import EvolutionResult
 
 logger = logging.getLogger(__name__)
+
+# How many cross-family pairs to attempt combining. Each attempt is a model call, and
+# beyond the strongest couple of pairs the returns fall off sharply.
+MAX_COMBINATION_ATTEMPTS = 2
 
 SYSTEM_PROMPT = """You are a master inventor and patent strategist.
 
@@ -136,7 +147,6 @@ async def _evolve_one(
     strategy: str,
     prompt: str,
     session_id: str,
-    parent_elo: float,
     parent: Invention | None = None,
 ) -> Invention | None:
     messages = [{"role": "user", "content": prompt}]
@@ -179,8 +189,76 @@ async def _evolve_one(
         trigger_advance=parent.trigger_advance if parent else "",
         trigger_source_domain=parent.trigger_source_domain if parent else "",
         trigger_url=parent.trigger_url if parent else "",
-        elo_score=parent_elo + 50.0,    # Optimistic seed — evolved versions are expected to be better
+        # No elo_score here on purpose. A variant enters the tournament at the same
+        # rating as everything else and has to win matches to place above its parent.
+        # The paper is explicit that this is what makes speculative evolution safe:
+        # "each new hypothesis must also compete in the tournament".
     )
+
+
+def _cluster_of(inv_id: str, clusters: list[dict]) -> str | None:
+    """Which mechanistic family (proximity cluster) an invention belongs to."""
+    for c in clusters:
+        if inv_id in c.get("invention_ids", []):
+            return c.get("label")
+    return None
+
+
+def _combination_candidates(
+    top_k: list[Invention],
+    clusters: list[dict],
+) -> list[tuple[Invention, Invention]]:
+    """
+    Choose which pairs are worth attempting to combine.
+
+    Elo rank says how good each invention is ALONE — it says nothing about whether two
+    mechanisms interact. So rank alone is the wrong basis for pairing: the top two are
+    often simply the two best independent ideas, and when they sit in the same
+    mechanistic family they are near-variants, the worst possible combination candidates.
+
+    Pairing therefore uses proximity's cluster assignments: only pairs drawn from
+    DIFFERENT mechanistic families are attempted, because a new technical effect has to
+    come from unlike mechanisms interacting. Rank is kept only as a tiebreak — given two
+    equally cross-family pairs, prefer the stronger parents.
+
+    Returns [] when nothing is worth attempting; combining is not mandatory.
+    """
+    pairs = [
+        (top_k[i], top_k[j])
+        for i in range(len(top_k))
+        for j in range(i + 1, len(top_k))
+    ]
+    if not pairs:
+        return []
+
+    # Without cluster data we cannot tell variants from genuinely different approaches.
+    # Fall back to the single best-ranked pair rather than guessing at more.
+    if not clusters:
+        logger.info("Evolution: no cluster data — attempting only the top-ranked pair")
+        return pairs[:1]
+
+    cross_family = []
+    for a, b in pairs:
+        ca, cb = _cluster_of(a.id, clusters), _cluster_of(b.id, clusters)
+        if ca is not None and cb is not None and ca == cb:
+            logger.info(
+                f"Evolution: skipping pair in one family ({ca}) — "
+                f"'{a.title[:28]}' + '{b.title[:28]}' are variants, not complements"
+            )
+            continue
+        cross_family.append((a, b))
+
+    if not cross_family:
+        logger.info(
+            "Evolution: no combination attempted — every top-ranked pair shares a "
+            "mechanistic family, so no pair can yield a new technical effect"
+        )
+        return []
+
+    # Strongest parents first, then cap: each attempt is a model call, and a third-best
+    # pair is unlikely to beat what the first two produce.
+    cross_family.sort(key=lambda p: p[0].elo_score + p[1].elo_score, reverse=True)
+    return cross_family[:MAX_COMBINATION_ATTEMPTS]
 
 
 async def run(
@@ -189,12 +267,14 @@ async def run(
     problem_statement: str,
     session_id: str,
     on_progress: Callable,
+    clusters: list[dict] | None = None,
 ) -> EvolutionResult:
     """
     Evolve top-K inventions.
 
-    - Enhance each top-K individually
-    - Combine top-1 and top-2 if both exist
+    - Enhance each top-K invention individually
+    - Attempt combination only for cross-family pairs that may yield a new technical
+      effect; each attempt may still decline. Zero combinations is a valid outcome.
     """
     top_k = ranked_inventions[:settings.top_k_for_evolution]
 
@@ -211,23 +291,20 @@ async def run(
                 strategy="enhanced",
                 prompt=_enhance_prompt(inv, review, problem_statement),
                 session_id=session_id,
-                parent_elo=inv.elo_score,
                 parent=inv,
             )
         )
 
-    # Combination task — merge #1 + #2
-    if len(top_k) >= 2:
-        avg_elo = (top_k[0].elo_score + top_k[1].elo_score) / 2
-        # Attribute the hybrid to #1's trigger, falling back to #2's if #1 has none
+    # Combination tasks — only pairs that could plausibly yield a new technical effect
+    for inv_a, inv_b in _combination_candidates(top_k, clusters or []):
+        # Attribute the hybrid to A's trigger, falling back to B's if A has none
         # (only literature_exploration inventions carry a trigger).
-        trigger_parent = top_k[0] if top_k[0].trigger_advance else top_k[1]
+        trigger_parent = inv_a if inv_a.trigger_advance else inv_b
         tasks.append(
             _evolve_one(
                 strategy="combined",
-                prompt=_combine_prompt(top_k[0], top_k[1], problem_statement),
+                prompt=_combine_prompt(inv_a, inv_b, problem_statement),
                 session_id=session_id,
-                parent_elo=avg_elo,
                 parent=trigger_parent,
             )
         )
@@ -247,13 +324,14 @@ async def run(
                 "elo_seed": r.elo_score,
             })
 
-    # Merge original + evolved, sort by Elo
+    # The merged field, deliberately NOT sorted here: these variants have not competed
+    # yet. The caller reviews them and re-runs the tournament, which is what decides
+    # the final order.
     all_inventions = ranked_inventions + evolved
-    all_inventions.sort(key=lambda x: x.elo_score, reverse=True)
 
     logger.info(
-        f"Evolution complete: {len(evolved)} evolved. "
-        f"Final top-3: {' | '.join(i.title[:25] for i in all_inventions[:3])}"
+        f"Evolution complete: {len(evolved)} variant(s) produced, "
+        f"pending review and tournament entry"
     )
 
     return EvolutionResult(

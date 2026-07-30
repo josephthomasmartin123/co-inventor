@@ -9,11 +9,16 @@ Why Elo tournament vs. simple score sorting?
 - Debate format forces Claude to articulate WHY one is better — improves signal quality
 - Elo naturally handles transitivity: if A > B > C, A's score stays high
 
-Tournament design:
-- Seed Elo from reflection overall_score (better start than flat 1000)
+Tournament design (paper-faithful — see docs/ADAPTATION.md §2.2):
+- Every invention enters at INITIAL_ELO and only match outcomes move it. Ratings are NOT
+  seeded from review scores: seeding let the reviews pre-decide an order the debates were
+  too few to overturn, and it made this function unsafe to call twice. Reviews still reach
+  the judge inside the debate prompt.
+- Matches are prioritised, not sampled uniformly: similar ideas, newcomers, top-ranked
 - K_FACTOR=32: moderate sensitivity, appropriate for small population
-- 12 rounds with pair-repeat avoidance
+- 12 rounds per pass, with pair-repeat avoidance
 - No web search — pure comparative reasoning (fast ~1-2s per debate)
+- Safe to call more than once; a second pass adds newcomers without resetting ratings
 """
 from __future__ import annotations
 
@@ -30,7 +35,7 @@ from app.models.pipeline import RankingResult
 logger = logging.getLogger(__name__)
 
 K_FACTOR = 32
-INITIAL_ELO = 1000.0
+INITIAL_ELO = 1200.0    # Paper: initial rating for any newly added hypothesis
 
 SYSTEM_PROMPT = """You are a senior patent attorney, technology investor, and domain-agnostic
 technical expert. Compare two invention concepts and decide which is more valuable.
@@ -101,8 +106,27 @@ def elo_update(winner_score: float, loser_score: float) -> tuple[float, float]:
 def _pick_pair(
     inventions: list[Invention],
     played_pairs: set[frozenset],
+    clusters: list[dict] | None = None,
+    new_ids: frozenset[str] = frozenset(),
 ) -> tuple[Invention, Invention] | None:
-    """Pick a pair not yet played. Returns None if all pairs exhausted."""
+    """
+    Pick the next match. Returns None if all pairs are exhausted.
+
+    The paper does not sample uniformly — it prioritises matches, because the tournament
+    budget is small relative to the number of possible pairs:
+
+      "(1) hypotheses are more likely to be compared with similar ones (based on the
+       Proximity agent's graph); (2) newer and top-ranking hypotheses are prioritised
+       for participation in tournament matches."
+
+    Similar ideas make the more informative comparison — deciding between two variants of
+    one approach separates them, where an unrelated pair mostly restates what the reviews
+    already said. Newcomers are prioritised so a freshly evolved variant is actually
+    tested rather than coasting on its entry rating.
+
+    Priorities are applied as sampling weights rather than a strict order, so the
+    tournament still explores.
+    """
     candidates = []
     for i in range(len(inventions)):
         for j in range(i + 1, len(inventions)):
@@ -111,7 +135,27 @@ def _pick_pair(
                 candidates.append((inventions[i], inventions[j]))
     if not candidates:
         return None
-    return random.choice(candidates)
+
+    cluster_by_id: dict[str, str] = {}
+    for c in (clusters or []):
+        label = c.get("label")
+        for inv_id in c.get("invention_ids", []):
+            if label is not None:
+                cluster_by_id[inv_id] = label
+
+    def weight(pair: tuple[Invention, Invention]) -> float:
+        a, b = pair
+        w = 1.0
+        ca, cb = cluster_by_id.get(a.id), cluster_by_id.get(b.id)
+        if ca is not None and ca == cb:
+            w += 2.0                                    # (1) compare similar ideas
+        if a.id in new_ids or b.id in new_ids:
+            w += 3.0                                    # (2) newer hypotheses first
+        mean_rating = (a.elo_score + b.elo_score) / 2.0
+        w += max(0.0, mean_rating - INITIAL_ELO) / 100.0  # (2) top-ranked participate more
+        return w
+
+    return random.choices(candidates, weights=[weight(p) for p in candidates], k=1)[0]
 
 
 async def _debate(
@@ -158,34 +202,37 @@ async def run(
     problem_statement: str,
     session_id: str,
     on_progress: Callable,
+    clusters: list[dict] | None = None,
+    new_ids: set[str] | None = None,
+    n_rounds: int | None = None,
 ) -> RankingResult:
     """
-    Run Elo tournament.
+    Run the Elo tournament.
 
-    Seed Elo from reflection scores for better starting signal.
-    Run N rounds of pairwise debates, updating Elo after each.
+    Ratings are NOT seeded from review scores. Every invention enters at the same rating
+    (Invention.elo_score defaults to INITIAL_ELO) and only match outcomes move it, which
+    is what the paper describes and what keeps this function safe to call more than once:
+    a second pass adds newcomers without discarding what the first pass established.
+
+    Reviews still inform the ranking — they are shown to the judge in the debate prompt —
+    but they no longer pre-decide the order.
+
+    clusters / new_ids steer match prioritisation; see _pick_pair.
     """
     if len(inventions) < 2:
         return RankingResult(ranked_inventions=inventions)
 
-    # Seed Elo from reflection overall_score (range 800-1200 maps to score 0-5)
-    for inv in inventions:
-        review = reviews.get(inv.id)
-        if review:
-            inv.elo_score = 800.0 + (review.overall_score / 5.0) * 400.0
-        else:
-            inv.elo_score = INITIAL_ELO
-
     matchup_log: list[EloMatchup] = []
     played_pairs: set[frozenset] = set()
-    n_rounds = settings.elo_rounds
+    n_rounds = n_rounds if n_rounds is not None else settings.elo_rounds
+    frozen_new = frozenset(new_ids or ())
 
     for round_num in range(n_rounds):
-        pair = _pick_pair(inventions, played_pairs)
+        pair = _pick_pair(inventions, played_pairs, clusters, frozen_new)
         if pair is None:
             # All pairs played — reset to allow repeats
             played_pairs.clear()
-            pair = _pick_pair(inventions, played_pairs)
+            pair = _pick_pair(inventions, played_pairs, clusters, frozen_new)
             if pair is None:
                 break
 
