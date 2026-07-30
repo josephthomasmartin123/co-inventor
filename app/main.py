@@ -62,6 +62,19 @@ async def lifespan(app: FastAPI):
     await storage.init_db()
     app.state.storage = storage
 
+    # A pipeline runs as an in-process task, so a restart or deploy kills any run in
+    # flight. Retire those sessions now: otherwise they sit in a running state for
+    # good, and anything waiting on one waits forever.
+    interrupted = await storage.fail_interrupted_sessions(
+        "This run was interrupted by a server restart and cannot be resumed. "
+        "Any inventions it had already produced are saved — start a new run to continue."
+    )
+    if interrupted:
+        logger.warning(
+            f"Retired {len(interrupted)} session(s) interrupted by a restart: "
+            + ", ".join(interrupted)
+        )
+
     # Per-session SSE event queues
     app.state.event_queues: dict = {}
 

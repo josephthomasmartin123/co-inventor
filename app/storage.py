@@ -119,6 +119,35 @@ class Storage:
             )
             await db.commit()
 
+    async def fail_interrupted_sessions(self, error: str) -> list[str]:
+        """
+        Mark every session that was mid-pipeline as failed, and return their ids.
+
+        A pipeline is an in-process asyncio task, so it cannot outlive the process.
+        Any session still in a running state when we boot was killed by a restart or
+        a deploy, and will never progress. Without this its status stays 'generating'
+        forever, and a client waiting on it waits for a result that cannot arrive.
+        """
+        running = ("generating", "proximity", "reflecting", "ranking",
+                   "evolving", "meta_reviewing")
+        placeholders = ",".join("?" for _ in running)
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                f"SELECT id, status FROM sessions WHERE status IN ({placeholders})",
+                running,
+            )
+            rows = await cursor.fetchall()
+            if not rows:
+                return []
+            await db.execute(
+                f"UPDATE sessions SET status = 'failed', error = ? "
+                f"WHERE status IN ({placeholders})",
+                (error, *running),
+            )
+            await db.commit()
+        return [f"{r['id']} (was {r['status']})" for r in rows]
+
     async def finalize_session(
         self,
         session_id: str,
