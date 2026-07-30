@@ -94,7 +94,10 @@ async def stream_session(session_id: str, request: Request):
             while True:
                 # Check for client disconnect
                 if await request.is_disconnected():
-                    logger.debug(f"Client disconnected from stream {session_id}")
+                    # Logged at INFO deliberately: when a run appears to freeze in the
+                    # browser, this line is the evidence that distinguishes "the stream
+                    # dropped" from "the pipeline stalled".
+                    logger.info(f"SSE client disconnected from stream {session_id}")
                     break
 
                 try:

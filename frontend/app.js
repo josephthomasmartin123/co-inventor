@@ -19,6 +19,7 @@
 
 let currentSessionId = null;
 let eventSource = null;
+let resultPoll = null;   // fallback poller, armed only if the live stream dies for good
 let inventionCount = 0;
 let searchCount = 0;
 let lastResult = null;   // stored on results load; used by export functions
@@ -107,6 +108,7 @@ function showScreen(name) {
 
 function resetToInput() {
   if (eventSource) { eventSource.close(); eventSource = null; }
+  stopResultPolling();
   currentSessionId = null;
   inventionCount = 0;
   searchCount = 0;
@@ -127,6 +129,7 @@ async function startSession(problem, parentSessionId = '', userFeedback = '') {
   document.getElementById('progress-problem-text').textContent = problem;
 
   // Reset progress counters
+  stopResultPolling();
   inventionCount = 0; searchCount = 0;
   ['invention-stream', 'search-stream', 'activity-log'].forEach(id => {
     document.getElementById(id).innerHTML = '';
@@ -214,7 +217,8 @@ function connectSSE(sessionId) {
 
   eventSource.addEventListener('matchup_complete', e => {
     const { data } = JSON.parse(e.data);
-    addLog(`  ⚔ Round ${data.round}/${data.total_rounds}: ${(data.winner_title || '').substring(0, 50)}`, 'dim');
+    const phase = data.phase ? ` ${data.phase}` : '';
+    addLog(`  ⚔ Round${phase} ${data.round}/${data.total_rounds}: ${(data.winner_title || '').substring(0, 50)}`, 'dim');
   });
 
   eventSource.addEventListener('evolution_complete', e => {
@@ -231,6 +235,7 @@ function connectSSE(sessionId) {
   });
 
   eventSource.addEventListener('done', async e => {
+    stopResultPolling();
     eventSource.close(); eventSource = null;
     markAllDone();
     setStatus('Complete — loading results…');
@@ -240,11 +245,58 @@ function connectSSE(sessionId) {
   eventSource.addEventListener('ping', () => {});
 
   eventSource.addEventListener('error', e => {
+    // A server-sent error event carries a data payload — that one is fatal.
     if (e.data) {
       try { setStatus(JSON.parse(e.data).data?.message || 'Pipeline error', true); } catch {}
+      if (eventSource) { eventSource.close(); eventSource = null; }
+      startResultPolling(sessionId);
+      return;
     }
-    if (eventSource) { eventSource.close(); eventSource = null; }
+
+    // Otherwise this is a transport blip, and EventSource reconnects on its own.
+    // Do NOT close it here: closing disables the built-in retry, so the page
+    // freezes on whatever stage it last saw while the pipeline runs on to
+    // completion invisibly. A long run makes a blip likely, so this matters.
+    if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+      eventSource = null;
+      addLog('Live progress stream closed — polling for the result instead', 'dim');
+      startResultPolling(sessionId);
+    } else {
+      addLog('Live progress stream interrupted — reconnecting…', 'dim');
+    }
   });
+}
+
+// ── Result polling fallback ───────────────────────────────────────────────
+// The pipeline runs server-side regardless of whether the browser is listening,
+// so if the stream is unrecoverable we can still finish by asking for the result.
+
+function startResultPolling(sessionId) {
+  if (resultPoll) return;
+  resultPoll = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`);
+      if (!res.ok) return;
+      const payload = await res.json();
+      const session = payload.session || payload;
+
+      if (session.status === 'complete') {
+        stopResultPolling();
+        markAllDone();
+        setStatus('Complete — loading results…');
+        await loadAndShowResults(sessionId);
+      } else if (session.status === 'failed') {
+        stopResultPolling();
+        setStatus(session.error || 'Pipeline failed', true);
+      }
+    } catch {
+      // Transient fetch failure — keep polling.
+    }
+  }, 10000);
+}
+
+function stopResultPolling() {
+  if (resultPoll) { clearInterval(resultPoll); resultPoll = null; }
 }
 
 // ── Stage breadcrumb ──────────────────────────────────────────────────────

@@ -181,6 +181,7 @@ async def run_pipeline(
                 # Newcomers are prioritised for matches, so they are actually tested
                 # rather than coasting on their entry rating.
                 new_ids={inv.id for inv in evo_result.evolved_inventions},
+                phase="re-run",
             )
             final_ranked = final_rank_result.ranked_inventions
             await storage.update_inventions(final_ranked)

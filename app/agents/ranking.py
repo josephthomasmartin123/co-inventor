@@ -205,6 +205,7 @@ async def run(
     clusters: list[dict] | None = None,
     new_ids: set[str] | None = None,
     n_rounds: int | None = None,
+    phase: str = "",
 ) -> RankingResult:
     """
     Run the Elo tournament.
@@ -269,6 +270,9 @@ async def run(
             "total_rounds": n_rounds,
             "winner_id": winner_id,
             "winner_title": inv_a.title if winner_id == inv_a.id else inv_b.title,
+            # Labels the second pass so a round counter restarting at 1 reads as
+            # progress rather than as the run having looped.
+            "phase": phase,
         })
 
     # Sort by Elo score descending
