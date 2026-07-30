@@ -229,6 +229,83 @@ textarea::placeholder { color: var(--text-3); }
   color: var(--text-3);
   margin-bottom: 20px;
 }
+.how-lead {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  line-height: 1.65;
+  max-width: 62ch;
+  margin-bottom: 28px;
+}
+.how-lead-tail { margin: 24px 0 0; }
+
+/* ── Pipeline diagram ──────────────────────────────────────────────────── */
+
+.flow-wrap {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 20px 18px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+.flow-svg {
+  display: block;
+  width: 100%;
+  min-width: 460px;
+  max-width: 640px;
+  height: auto;
+  margin: 0 auto;
+}
+.flow-node {
+  fill: var(--white);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.flow-chip {
+  fill: var(--white);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.flow-node-accent { fill: var(--accent); }
+.flow-line,
+.flow-line-dashed {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1;
+}
+.flow-line-dashed { stroke-dasharray: 3 3; }
+.flow-arrowhead { fill: var(--text-3); }
+.flow-svg text { font-family: var(--font); }
+.flow-label-on-accent {
+  font-size: 11px;
+  font-weight: 500;
+  fill: #fff;
+}
+.flow-chip-label {
+  font-size: 10px;
+  fill: var(--text-2);
+}
+.flow-stage-num {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: var(--accent);
+  letter-spacing: 0.03em;
+}
+.flow-stage-desc {
+  font-size: 10.5px;
+  fill: var(--text-2);
+}
+.flow-loop-label {
+  font-size: 9px;
+  fill: var(--text-3);
+  letter-spacing: 0.02em;
+}
+.flow-footnote {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  margin-bottom: 24px;
+}
+
 .how-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -238,7 +315,11 @@ textarea::placeholder { color: var(--text-3); }
   border-radius: var(--radius);
   overflow: hidden;
 }
-@media (max-width: 600px) { .how-grid { grid-template-columns: 1fr 1fr; } }
+.how-grid-6 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 600px) {
+  .how-grid,
+  .how-grid-6 { grid-template-columns: 1fr 1fr; }
+}
 .how-cell {
   background: var(--white);
   padding: 16px 14px;
