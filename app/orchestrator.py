@@ -6,9 +6,13 @@ Pipeline order (matches paper):
                    finds recent cross-domain advances / "triggers")
   2. Proximity   — deduplicate near-identical inventions, cluster by approach
   3. Reflection  — two-tier: initial filter → full web-search evaluation
-  4. Ranking     — Elo tournament, pairwise scientific debates
-  5. Evolution   — enhance top-K, combine top-1+2
+  4. Ranking     — Elo tournament, pairwise scientific debates; everything enters level
+  5. Evolution   — enhance top-K, combine across mechanistic families only, then
+                   (5b) review the variants and re-run the tournament, because the paper
+                   requires every new hypothesis to compete rather than be promoted
   6. Meta-review — synthesise all evaluations into a research overview
+
+Deliberate departures from the paper are documented in docs/ADAPTATION.md.
 
 Progress events emitted to asyncio.Queue, consumed by SSE endpoint.
 All search queries surface as 'search_query' events so the UI can show them.
@@ -109,6 +113,7 @@ async def run_pipeline(
             problem_statement=session.problem_statement,
             session_id=sid,
             on_progress=on_progress,
+            clusters=prox_result.clusters,
         )
         await storage.update_inventions(rank_result.ranked_inventions)
 
@@ -126,8 +131,59 @@ async def run_pipeline(
             problem_statement=session.problem_statement,
             session_id=sid,
             on_progress=on_progress,
+            # Evolution pairs on mechanistic family, not rank — two top-ranked
+            # inventions from one family are variants, not complements.
+            clusters=prox_result.clusters,
         )
         await storage.save_inventions(evo_result.evolved_inventions)
+
+        # ── Stage 5b: Variants must earn their place ───────────────────────
+        # The paper does not let evolution promote anything on its own: "The Evolution
+        # agent generates new hypotheses; it doesn't modify or replace existing ones.
+        # This strategy protects the quality of top-ranked hypotheses from flawed
+        # improvements, as each new hypothesis must also compete in the tournament."
+        # So a variant is reviewed like any other invention, then enters the tournament
+        # at the same rating as everything else and has to win to place above its parent.
+        final_ranked = rank_result.ranked_inventions
+
+        if evo_result.evolved_inventions:
+            n_new = len(evo_result.evolved_inventions)
+            await emit("status", {
+                "stage": "evolving",
+                "stage_num": 5, "total_stages": 6,
+                "message": f"Reviewing {n_new} new variant{'s' if n_new != 1 else ''} "
+                           f"against the same five dimensions…",
+            })
+
+            evo_refl = await reflection.run(
+                inventions=evo_result.evolved_inventions,
+                problem_statement=session.problem_statement,
+                session_id=sid,
+                on_progress=on_progress,
+            )
+            reviews_by_id.update({r.invention_id: r for r in evo_refl.reviews})
+            await storage.save_reviews(evo_refl.reviews)
+
+            await emit("status", {
+                "stage": "evolving",
+                "stage_num": 5, "total_stages": 6,
+                "message": "Re-running the tournament — variants must beat the "
+                           "inventions they came from to rank above them…",
+            })
+
+            final_rank_result = await ranking.run(
+                inventions=evo_result.final_ranked,
+                reviews=reviews_by_id,
+                problem_statement=session.problem_statement,
+                session_id=sid,
+                on_progress=on_progress,
+                clusters=prox_result.clusters,
+                # Newcomers are prioritised for matches, so they are actually tested
+                # rather than coasting on their entry rating.
+                new_ids={inv.id for inv in evo_result.evolved_inventions},
+            )
+            final_ranked = final_rank_result.ranked_inventions
+            await storage.update_inventions(final_ranked)
 
         # ── Stage 6: Meta-review ──────────────────────────────────────────
         await storage.update_session_status(sid, "meta_reviewing")
@@ -139,14 +195,14 @@ async def run_pipeline(
 
         meta_result = await meta_review.run(
             problem_statement=session.problem_statement,
-            ranked_inventions=evo_result.final_ranked,
+            ranked_inventions=final_ranked,
             reviews=reviews_by_id,
             session_id=sid,
             on_progress=on_progress,
         )
 
         # ── Finalise ──────────────────────────────────────────────────────
-        final_top = evo_result.final_ranked[:5]
+        final_top = final_ranked[:5]
         final_ids = [inv.id for inv in final_top]
         meta_dict = meta_result.model_dump()
 

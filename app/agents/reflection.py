@@ -1,8 +1,9 @@
 """
 Reflection Agent — aligned with Co-Scientist paper (Section 3.2)
 
-Five evaluation dimensions (paper: "alignment with goal, plausibility, novelty,
-testability, safety" — adapted for invention):
+Five evaluation dimensions. The paper's criteria are "plausibility, novelty, testability,
+and safety" plus alignment with the research goal; testability becomes feasibility,
+patentability is added and safety is not scored — see docs/ADAPTATION.md §1.2 and §3.4:
   1. Novelty             (0.30) — non-obvious mechanism, absent from prior art
   2. Scientific plausibility (0.25) — underlying physics/chemistry is sound
   3. Patentability       (0.20) — specific, claimable technical mechanism
@@ -10,8 +11,11 @@ testability, safety" — adapted for invention):
   5. Problem fit         (0.10) — addresses root cause, not a symptom
 
 Two-tier review:
-  Tier 1 — Initial Review: quick filter, no web search. Removes clearly weak ideas.
+  Tier 1 — Initial Review: quick pass, no web search. NB: a concept that fails is scored
+           down, not removed — it still enters the tournament (docs/ADAPTATION.md §2.4).
   Tier 2 — Full Review:    comprehensive evaluation with prior art search.
+
+Also called on evolved variants in stage 5b, so this must stay safe to run on a subset.
 """
 from __future__ import annotations
 
